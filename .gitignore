@@ -4,8 +4,8 @@
 /CMakeCache.txt
 /compile_commands.json
 
-/dataset/
-/results/
+/dataset
+/results
 /docs/evaluation/raw_baselines/
 /docs/evaluation/*.tsv
 /docs/evaluation/*.log

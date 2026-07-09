@@ -91,6 +91,9 @@ The low-memory paper build path is the streaming reordered builder:
   -train_iters 10
 ```
 
+The output index directory must not already exist. Use a fresh path or remove an
+old generated index before rebuilding.
+
 Search the built index:
 
 ```bash
@@ -141,7 +144,10 @@ logs under `docs/evaluation/`.
 ## Updates
 
 SCORE also includes the update path used by the paper. Updates use `.fbin`
-vectors and explicit original vector ids.
+vectors and explicit original vector ids. The update files below are workload
+inputs, not files distributed with GIST: the id file contains one uint32 original
+vector id per update row. Use new ids for inserts, existing ids for replacements,
+or `-delete_ids` for deletions.
 
 ```bash
 ./build/score_update_index \
