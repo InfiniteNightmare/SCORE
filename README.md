@@ -101,7 +101,7 @@ ratio for higher recall:
 
 `-M` must match the value used to build the index. In this example, `M=8`,
 `beta=0.01`, and `threads=1` are GIST experiment settings rather than binary
-defaults. The default value of `max_w` is `3`.
+defaults.
 
 ## Default Parameters
 
@@ -136,6 +136,16 @@ The primary index builder, `score_stream_build_reorder`, uses these defaults:
 | `-max_w` | `3` |
 | `-score_prefetch` | `32` (`score_search` only) |
 
+`score_update_index` uses these update defaults:
+
+| Option | Default |
+| --- | --- |
+| `-durability` | `buffered` |
+| `-batch_rows` | One WAL commit for the input batch |
+| `-threads` | OpenMP default |
+| `-flush_fraction` | `0.05` |
+| `-compaction_fraction` | `0.20` |
+
 The paper experiments use `M=8, ivf_k=1024` for the million-scale datasets and
 `M=16, ivf_k=2500` for Cohere10M and Wikipedia.
 
@@ -164,8 +174,8 @@ To compute exact ground truth for a base/query pair:
 
 ## Updates
 
-Update files are workload inputs, not part of GIST1M. Vectors use `.fbin`, and
-ID files contain one original `uint32` vector ID per row.
+Update vectors use `.fbin`, and ID files contain one original `uint32` vector
+ID per row.
 
 Apply an upsert batch; new IDs are inserted and existing IDs are replaced:
 
