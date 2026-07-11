@@ -206,15 +206,6 @@ Use the update-aware query executable after applying updates:
 
 Ground truth must describe the live vectors represented by the updated index.
 
-## Data Formats
-
-SCORE uses standard ANN vector formats:
-
-- `.fvecs`: repeated `[dim:int32][dim float32 values]` rows.
-- `.ivecs`: repeated `[dim:int32][dim int32 values]` rows, normally ground
-  truth.
-- `.fbin`: `[n:int32][dim:int32][reserved:int32=0][n * dim float32 values]`.
-
 ## Paper Datasets
 
 The repository does not redistribute datasets. The experiment scripts expect
