@@ -136,11 +136,8 @@ The primary index builder, `score_stream_build_reorder`, uses these defaults:
 | `-max_w` | `3` |
 | `-score_prefetch` | `32` (`score_search` only) |
 
-The paper experiments use `rabitq_k=200`, a 512 MiB training sample, 128 MiB
-streaming blocks, and 10 K-means iterations. For float32 vectors of dimension
-`d`, set `sample_rows=floor(512 * 1024 * 1024 / (4 * d))`. They use
-`M=8, ivf_k=1024` for the million-scale datasets and `M=16, ivf_k=2500` for
-Cohere10M and Wikipedia.
+The paper experiments use `M=8, ivf_k=1024` for the million-scale datasets and
+`M=16, ivf_k=2500` for Cohere10M and Wikipedia.
 
 ## Recall-QPS Sweeps
 
