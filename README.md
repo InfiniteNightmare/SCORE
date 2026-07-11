@@ -2,9 +2,21 @@
 
 SCORE is an in-memory subspace collision index for high-dimensional approximate
 nearest-neighbor (ANN) search. This repository contains the source code and
-experiment helpers used by the paper artifact. Datasets, generated indexes,
-benchmark outputs, paper sources, and external baseline repositories are not
-tracked.
+experiment helpers used by the paper artifact.
+
+## Repository Layout
+
+- `include/`: SCORE index construction, query, rotation, and update code.
+- `src/`: command-line executables.
+- `tests/`: C++ smoke and regression tests.
+- `tools/experiments/`: SCORE data conversion and Recall-QPS sweep helpers.
+- `external/RaBitQ-Library/`: vendored header-only RaBitQ subset.
+- `external/SuperKMeans/`: vendored header-only SuperKMeans subset.
+
+The vendored dependencies retain their upstream licenses. Their snapshots are
+documented in
+[`external/RaBitQ-Library/VENDOR.md`](external/RaBitQ-Library/VENDOR.md) and
+[`external/SuperKMeans/VENDOR.md`](external/SuperKMeans/VENDOR.md).
 
 ## Quick Start
 
@@ -229,17 +241,3 @@ sources and configurations:
 | alpha-CNG | [Binglbh/Fast-Convergent-Proximity-Graphs](https://github.com/Binglbh/Fast-Convergent-Proximity-Graphs-for-Approximate-Nearest-Neighbor-Search) | `L=60`, `R=70`, `C=500` |
 | IVF-RaBitQ | [gaoj0017/RaBitQ](https://github.com/gaoj0017/RaBitQ), [VectorDB-NTU/RaBitQ-Library](https://github.com/VectorDB-NTU/RaBitQ-Library) | 4096 coarse clusters |
 | DET-LSH | [WeiJiuQi/DET-LSH](https://github.com/WeiJiuQi/DET-LSH) | `K=16`, `L=4` |
-
-## Repository Layout
-
-- `include/`: SCORE index construction, query, rotation, and update code.
-- `src/`: command-line executables.
-- `tests/`: C++ smoke and regression tests.
-- `tools/experiments/`: SCORE data conversion and Recall-QPS sweep helpers.
-- `external/RaBitQ-Library/`: vendored header-only RaBitQ subset.
-- `external/SuperKMeans/`: vendored header-only SuperKMeans subset.
-
-The vendored dependencies retain their upstream licenses. Their snapshots are
-documented in
-[`external/RaBitQ-Library/VENDOR.md`](external/RaBitQ-Library/VENDOR.md) and
-[`external/SuperKMeans/VENDOR.md`](external/SuperKMeans/VENDOR.md).
