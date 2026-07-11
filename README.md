@@ -8,6 +8,10 @@ tracked.
 
 ## Quick Start
 
+The steps below show the general SCORE workflow using GIST1M as a concrete
+example. For another dataset, replace the file paths and dataset-specific index
+settings.
+
 ### 1. Build
 
 Requirements:
@@ -40,17 +44,17 @@ BLAS or AOCL-BLIS is optional and accelerates brute-force ground-truth
 generation. tcmalloc is also optional. liburing is needed only with
 `-DSCORE_USE_LIBURING=ON`.
 
-### 2. Prepare GIST1M
+### 2. Prepare a Dataset
 
-Create the local data and output directories, then place the GIST files at the
-paths shown below. Both directories are ignored by Git.
+Create local data and output directories. In this GIST1M example, place the
+downloaded files under `dataset/gist/`. Both directories are ignored by Git.
 
 ```bash
 mkdir -p dataset/gist results/score_indices
 ```
 
-The streaming builder consumes `.fbin` base vectors. Convert the downloaded
-GIST base file once:
+The streaming builder consumes `.fbin` base vectors. For GIST1M, convert the
+downloaded base file once:
 
 ```bash
 python3 tools/experiments/fvecs_to_fbin.py \
