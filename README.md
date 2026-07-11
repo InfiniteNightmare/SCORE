@@ -164,16 +164,10 @@ To compute exact ground truth for a base/query pair:
 
 ## Updates
 
-SCORE accepts inserts, deletions, and upserts against a built index. Insert and
-upsert vectors use `.fbin`; each accompanying ID file contains one original
-`uint32` vector ID per row in the same order. ID files may be
-whitespace/comma-separated text or raw `uint32` binary.
+Update files are workload inputs, not part of GIST1M. Vectors use `.fbin`, and
+ID files contain one original `uint32` vector ID per row.
 
-- Insert IDs must not already be live.
-- Upserts insert missing IDs and replace existing IDs.
-- Deletions require only an ID file.
-
-For example:
+Apply an upsert batch; new IDs are inserted and existing IDs are replaced:
 
 ```bash
 ./build/score_update_index \
@@ -182,26 +176,21 @@ For example:
   -upsert_ids dataset/gist/gist_update_ids.txt
 ```
 
-The defaults are buffered WAL durability, one commit for the supplied batch,
-the OpenMP default thread count, an L0 flush fraction of `0.05`, and a
-compaction fraction of `0.20`. Override them with `-durability`, `-batch_rows`,
-`-threads`, `-flush_fraction`, and `-compaction_fraction` as needed.
+Use `-insert_fbin` with `-insert_ids` for insert-only batches and `-delete_ids`
+for deletions.
 
-Use the update-aware query executable after applying updates:
+Query the updated index with `score_update_search`:
 
 ```bash
 ./build/score_update_search \
   results/score_indices/gist_score \
   dataset/gist/gist_query.fvecs \
   dataset/gist/gist_groundtruth.ivecs \
-  -M 8 \
-  -alpha 0.05 \
-  -beta 0.01 \
-  -threads 1 \
-  -max_w 3
+  -M 8
 ```
 
-Ground truth must describe the live vectors represented by the updated index.
+It accepts the same query options as `score_search`. Ground truth must match the
+current live dataset.
 
 ## Paper Datasets
 
