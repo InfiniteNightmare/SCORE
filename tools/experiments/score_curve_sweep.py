@@ -7,12 +7,11 @@ Use ``--build-backend stream-reorder`` to build with the optimized streaming
 reorder path (``score_stream_build_reorder``), or ``stream-no-reorder`` for the
 matching streaming builder without PID reorder. Both consume ``.fbin`` base
 vectors and expose streaming worker controls. Summary search logs are written
-as JSON files under
-``docs/evaluation/raw_baselines/score/<dataset>/`` so they can be consumed by
-``parse_curve_raw_logs.py`` together with baseline raw logs.  The ``--index-dir``
-is the phase boundary: if it does not exist the script builds it first and records
-build metrics; if it already exists the script treats it as a frozen index and
-runs search curves directly.  Use ``--force-rebuild`` for an explicit rebuild.
+as JSON files under ``docs/evaluation/raw_baselines/score/<dataset>/``. The
+``--index-dir`` is the phase boundary: if it does not exist the script builds it
+first and records build metrics; if it already exists the script treats it as a
+frozen index and runs search curves directly. Use ``--force-rebuild`` for an
+explicit rebuild.
 """
 
 from __future__ import annotations
@@ -568,7 +567,7 @@ def main() -> int:
     parser.add_argument("--imi-k-half", type=int, default=50)
     parser.add_argument("--alphas", type=parse_float_csv, default=parse_float_csv("0.03,0.04,0.05,0.06"))
     parser.add_argument("--betas", type=parse_float_csv, default=parse_float_csv("0.001,0.002,0.005,0.01,0.02"))
-    parser.add_argument("--max-ws", type=parse_int_csv, default=parse_int_csv("15"))
+    parser.add_argument("--max-ws", type=parse_int_csv, default=parse_int_csv("3"))
     parser.add_argument("--pid-reorder", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--sample-rows", type=int, default=65536)
     parser.add_argument("--block-mib", type=int, default=256)

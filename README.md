@@ -1,45 +1,33 @@
-# SCORE Artifact
+# SCORE
 
-This repository contains the source code needed to build and evaluate SCORE for
-the paper submission. It intentionally excludes local build products, large
-datasets, generated indexes, raw benchmark logs, paper sources, and third-party
-baseline repositories.
+SCORE is an in-memory subspace collision index for high-dimensional approximate
+nearest-neighbor (ANN) search. This repository contains the source code and
+experiment helpers used by the paper artifact. Datasets, generated indexes,
+benchmark outputs, paper sources, and external baseline repositories are not
+tracked.
 
-## Contents
+## Quick Start
 
-- `include/` and `src/`: SCORE C++17 implementation and command-line tools.
-- `external/RaBitQ-Library/`: vendored header-only subset used by SCORE.
-- `external/SuperKMeans/`: vendored header-only subset used by SCORE.
-- `tests/`: C++ smoke and regression tests.
-- `tools/experiments/`: lightweight scripts for data conversion, SCORE sweeps,
-  baseline metric capture, and plotting/parsing benchmark results.
+### 1. Build
 
-## Build
-
-Required system packages:
+Requirements:
 
 - CMake 3.16 or newer
-- A C++17 compiler, tested with GCC 13.3.0
+- A C++17 compiler (tested with GCC 13.3.0)
 - OpenMP and pthreads
-- Eigen3 headers, or the vendored Eigen fallback under `external/RaBitQ-Library`
-- RapidJSON headers, or network access during CMake configure so CMake can fetch
-  RapidJSON v1.1.0
+- Eigen3 headers, or the fallback vendored with RaBitQ-Library
+- RapidJSON headers, or network access during CMake configuration
 
-Optional packages:
-
-- BLAS or AOCL-BLIS for faster brute-force ground-truth generation
-- tcmalloc for slightly faster serving builds
-- liburing only when configuring with `-DSCORE_USE_LIBURING=ON`
-
-Build commands:
+Build SCORE and run its tests:
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
+./build/score_test
 ```
 
-For a portable build on machines that do not match the evaluation CPU, disable
-native and AVX-512 code generation:
+CMake enables native and AVX-512 code generation when supported. For a portable
+binary, configure with:
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
@@ -48,23 +36,21 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
 cmake --build build -j
 ```
 
-Run tests:
+BLAS or AOCL-BLIS is optional and accelerates brute-force ground-truth
+generation. tcmalloc is also optional. liburing is needed only with
+`-DSCORE_USE_LIBURING=ON`.
+
+### 2. Prepare GIST1M
+
+Create the local data and output directories, then place the GIST files at the
+paths shown below. Both directories are ignored by Git.
 
 ```bash
-./build/score_test
+mkdir -p dataset/gist results/score_indices
 ```
 
-## Data Formats
-
-SCORE uses standard ANN binary vector files:
-
-- `.fvecs`: repeated rows of `[dim:int32][dim float32 values]`.
-- `.ivecs`: repeated rows of `[dim:int32][dim int32 values]`, used for ground
-  truth.
-- `.fbin`: `[n:int32][dim:int32][reserved:int32=0][n * dim float32 values]`.
-
-The optimized streaming builder consumes `.fbin` base vectors. Convert `.fvecs`
-base files with:
+The streaming builder consumes `.fbin` base vectors. Convert the downloaded
+GIST base file once:
 
 ```bash
 python3 tools/experiments/fvecs_to_fbin.py \
@@ -73,46 +59,103 @@ python3 tools/experiments/fvecs_to_fbin.py \
   --overwrite
 ```
 
-Queries and ground truth are read as `.fvecs` and `.ivecs`.
+Queries remain in `.fvecs` format and ground truth in `.ivecs` format.
 
-## Basic Usage
+### 3. Build an Index
 
-The low-memory paper build path is the streaming reordered builder:
+The following quick-start uses the GIST1M settings `M=8` and `ivf_k=1024`, plus
+a 128 MiB source block. Other builder options keep their binary defaults.
 
 ```bash
 ./build/score_stream_build_reorder \
   dataset/gist/gist_base.fbin \
   results/score_indices/gist_score \
   -M 8 \
-  -rabitq_k 200 \
   -ivf_k 1024 \
-  -sample_rows 65536 \
-  -block_mib 128 \
-  -train_iters 10
+  -block_mib 128
 ```
 
-The output index directory must not already exist. Use a fresh path or remove an
-old generated index before rebuilding.
+The output index directory must not already exist. The builder creates it and
+fails rather than overwriting an existing index.
 
-Search the built index:
+### 4. Search
+
+This GIST1M point uses one query thread and a larger-than-default candidate
+ratio for higher recall:
 
 ```bash
 ./build/score_search \
   results/score_indices/gist_score \
   dataset/gist/gist_query.fvecs \
   dataset/gist/gist_groundtruth.ivecs \
-  -topk 10 \
   -M 8 \
   -alpha 0.05 \
   -beta 0.01 \
   -threads 1 \
-  -max_w 15
+  -max_w 3
 ```
 
-For larger datasets in the paper, use `-M 16 -ivf_k 2500`. For million-scale
-datasets, use `-M 8 -ivf_k 1024`.
+`-M` must match the value used to build the index. In this example, `M=8`,
+`beta=0.01`, and `threads=1` are GIST experiment settings rather than binary
+defaults. The default value of `max_w` is `3`.
 
-Compute brute-force ground truth when needed:
+## Default Parameters
+
+The primary index builder, `score_stream_build_reorder`, uses these defaults:
+
+| Option | Default |
+| --- | --- |
+| `-M` | `16` subspaces |
+| `-rabitq_k` | `200` top-level clusters |
+| `-rabitq_seed` | `42` |
+| `-ivf_k` | `2500` cells per subspace |
+| `-sample_rows` | `65536` training rows |
+| `-train_iters` | `10` |
+| `-subspace_workers` | `0`, meaning all subspaces |
+| Input block | `65536` rows; `-block_mib` overrides it by size |
+| Reorder key | depth `2`, `cluster-first` |
+| Reorder I/O | `io_rows=65536`, `bucket_buffer_rows=64`, `rewrite_workers=4` |
+
+`score_search` and `score_update_search` share these query defaults:
+
+| Option | Default |
+| --- | --- |
+| `-topk` | `10` |
+| `-M` | `16` |
+| `-alpha` | `0.05` |
+| `-beta` | `0.001` |
+| `-query_runs` | `1` |
+| `-threads` | `0`, meaning the OpenMP default |
+| `-max_w` | `3` |
+| `-score_prefetch` | `32` (`score_search` only) |
+
+The paper experiments use `rabitq_k=200`, a 512 MiB training sample, 128 MiB
+streaming blocks, and 10 K-means iterations. For float32 vectors of dimension
+`d`, set `sample_rows=floor(512 * 1024 * 1024 / (4 * d))`. They use
+`M=8, ivf_k=1024` for the million-scale datasets and `M=16, ivf_k=2500` for
+Cohere10M and Wikipedia.
+
+## Recall-QPS Sweeps
+
+Run the default SCORE query grid on an existing GIST1M index:
+
+```bash
+python3 tools/experiments/score_curve_sweep.py \
+  --dataset gist1m \
+  --index-dir results/score_indices/gist_score \
+  --build-backend stream-reorder \
+  --M 8 \
+  --ivf-k 1024
+```
+
+The default grid uses `alpha={0.03,0.04,0.05,0.06}`,
+`beta={0.001,0.002,0.005,0.01,0.02}`, `max_w=3`, five runs per point, and one
+query thread. If the index directory is absent, the script builds it first; an
+existing directory is treated as a fixed index. Results are written under
+`docs/evaluation/`. Use `--overwrite-logs` to replace results with the same
+label and `--force-rebuild` to rebuild an index under `results/`.
+
+To compute exact ground truth for a base/query pair:
 
 ```bash
 ./build/gt_compute \
@@ -122,102 +165,98 @@ Compute brute-force ground truth when needed:
   100
 ```
 
-Run a SCORE curve sweep:
-
-```bash
-python3 tools/experiments/score_curve_sweep.py \
-  --dataset gist1m \
-  --index-dir results/score_indices/gist_score \
-  --build-backend stream-reorder \
-  --M 8 \
-  --ivf-k 1024 \
-  --alphas 0.03,0.04,0.05,0.06 \
-  --betas 0.001,0.002,0.005,0.01,0.02 \
-  --max-ws 15 \
-  --runs 5 \
-  --threads 1
-```
-
-The script expects dataset files under the paths listed below and writes result
-logs under `docs/evaluation/`.
-
 ## Updates
 
-SCORE also includes the update path used by the paper. Updates use `.fbin`
-vectors and explicit original vector ids. The update files below are workload
-inputs, not files distributed with GIST: the id file contains one uint32 original
-vector id per update row. Use new ids for inserts, existing ids for replacements,
-or `-delete_ids` for deletions.
+SCORE accepts inserts, deletions, and upserts against a built index. Insert and
+upsert vectors use `.fbin`; each accompanying ID file contains one original
+`uint32` vector ID per row in the same order. ID files may be
+whitespace/comma-separated text or raw `uint32` binary.
+
+- Insert IDs must not already be live.
+- Upserts insert missing IDs and replace existing IDs.
+- Deletions require only an ID file.
+
+For example:
 
 ```bash
 ./build/score_update_index \
   results/score_indices/gist_score \
   -upsert_fbin dataset/gist/gist_update.fbin \
-  -upsert_ids dataset/gist/gist_update_ids.txt \
-  -durability buffered \
-  -batch_rows 1000 \
-  -threads 48 \
-  -flush_fraction 0.05 \
-  -compaction_fraction 0.20
+  -upsert_ids dataset/gist/gist_update_ids.txt
 ```
 
-Query an updated index:
+The defaults are buffered WAL durability, one commit for the supplied batch,
+the OpenMP default thread count, an L0 flush fraction of `0.05`, and a
+compaction fraction of `0.20`. Override them with `-durability`, `-batch_rows`,
+`-threads`, `-flush_fraction`, and `-compaction_fraction` as needed.
+
+Use the update-aware query executable after applying updates:
 
 ```bash
 ./build/score_update_search \
   results/score_indices/gist_score \
   dataset/gist/gist_query.fvecs \
   dataset/gist/gist_groundtruth.ivecs \
-  -topk 10 \
   -M 8 \
   -alpha 0.05 \
   -beta 0.01 \
   -threads 1 \
-  -max_w 15
+  -max_w 3
 ```
+
+Ground truth must describe the live vectors represented by the updated index.
+
+## Data Formats
+
+SCORE uses standard ANN vector formats:
+
+- `.fvecs`: repeated `[dim:int32][dim float32 values]` rows.
+- `.ivecs`: repeated `[dim:int32][dim int32 values]` rows, normally ground
+  truth.
+- `.fbin`: `[n:int32][dim:int32][reserved:int32=0][n * dim float32 values]`.
 
 ## Paper Datasets
 
-The paper uses the following datasets. The repository does not redistribute
-datasets; place converted files under the expected paths if using the provided
-scripts.
+The repository does not redistribute datasets. The experiment scripts expect
+the following paths:
 
-| Dataset | Expected paths | Source |
+| Dataset | Script key and expected files | Source |
 | --- | --- | --- |
-| GIST1M | `dataset/gist/gist_base.fvecs`, `gist_query.fvecs`, `gist_groundtruth.ivecs`, optional `gist_base.fbin` | TEXMEX `ANN_GIST1M`: http://corpus-texmex.irisa.fr/ |
-| LAION1M | `dataset/laion1m/laion1m_base.fvecs`, `laion1m_query.fvecs`, `laion1m_groundtruth.ivecs`, optional `laion1m_base.fbin` | SISAP 2024 LAION challenge data: https://sisap-challenges.github.io/2024/datasets/ |
-| Cohere1M | `dataset/cohere1m/cohere1m_base.fvecs`, `cohere1m_query.fvecs`, `cohere1m_groundtruth.ivecs`, optional `cohere1m_base.fbin` | Hugging Face `makneeee/cohere_medium_1m`: https://huggingface.co/datasets/makneeee/cohere_medium_1m |
-| ImageNet | `dataset/imagenet1m_2048/imagenet1m_2048_base.fvecs`, `imagenet1m_2048_query.fvecs`, `imagenet1m_2048_groundtruth.ivecs`, optional `imagenet1m_2048_base.fbin` | ILSVRC 2012 source images, evaluated as 2048-D features: https://image-net.org/challenges/LSVRC/2012/ |
-| Cohere10M | `dataset/cohere10m/cohere10m_base.fvecs`, `cohere10m_query.fvecs`, `cohere10m_groundtruth.ivecs`, optional `cohere10m_base.fbin` | Hugging Face `makneeee/cohere_large_10m`: https://huggingface.co/datasets/makneeee/cohere_large_10m |
-| Wikipedia | `dataset/wikipedia_bge_m3/wikipedia_bge_m3_base.fvecs`, `wikipedia_bge_m3_query.fvecs`, `wikipedia_bge_m3_groundtruth.ivecs`, optional `wikipedia_bge_m3_base.fbin` | SISAP 2026 development datasets: https://huggingface.co/datasets/SISAP-Challenges/SISAP2026 |
+| GIST1M | `gist1m`: `dataset/gist/gist_{base,query}.fvecs`, `gist_groundtruth.ivecs` | [TEXMEX ANN GIST1M](http://corpus-texmex.irisa.fr/) |
+| LAION1M | `laion1m`: `dataset/laion1m/laion1m_{base,query}.fvecs`, `laion1m_groundtruth.ivecs` | [SISAP 2024 LAION challenge](https://sisap-challenges.github.io/2024/datasets/) |
+| Cohere1M | `cohere1m`: `dataset/cohere1m/cohere1m_{base,query}.fvecs`, `cohere1m_groundtruth.ivecs` | [makneeee/cohere_medium_1m](https://huggingface.co/datasets/makneeee/cohere_medium_1m) |
+| ImageNet1M | `imagenet1m_2048`: `dataset/imagenet1m_2048/imagenet1m_2048_{base,query}.fvecs`, `imagenet1m_2048_groundtruth.ivecs` | [ILSVRC 2012 images](https://image-net.org/challenges/LSVRC/2012/), evaluated as 2048-D features |
+| Cohere10M | `cohere10m`: `dataset/cohere10m/cohere10m_{base,query}.fvecs`, `cohere10m_groundtruth.ivecs` | [makneeee/cohere_large_10m](https://huggingface.co/datasets/makneeee/cohere_large_10m) |
+| Wikipedia | `wikipedia`: `dataset/wikipedia_bge_m3/wikipedia_bge_m3_{base,query}.fvecs`, `wikipedia_bge_m3_groundtruth.ivecs` | [SISAP 2026 development datasets](https://huggingface.co/datasets/SISAP-Challenges/SISAP2026) |
+
+For streaming builds, convert each base file to the same path with an `.fbin`
+extension.
 
 ## Baseline Sources
 
-Baseline source code is not vendored in this artifact. The paper compares SCORE
-with the following systems and uses the listed upstream/source references.
+Baseline repositories are not vendored. The paper uses the following upstream
+sources and configurations:
 
-| Baseline | Source used for reproduction | Paper/config note |
+| Baseline | Upstream source | Paper configuration |
 | --- | --- | --- |
-| SuCo | https://github.com/WeiJiuQi/SuCo | Subspace Collision baseline; paper runs use `N_s=8`, `K=50`. |
-| TaCo | https://github.com/WeiJiuQi/TaCo | Data-adaptive/query-aware subspace collision baseline; paper runs use `N_s=8`, `s=10`, `K=50`. |
-| CRISP | Paper/preprint: https://arxiv.org/abs/2603.05180 | Correlation-resilient subspace collision baseline; paper runs use 16 dimensions per subspace and `K=100`. |
-| HNSW | hnswlib: https://github.com/nmslib/hnswlib | Graph baseline; paper runs use `M=48`, `efC=200`. |
-| alpha-CNG | https://github.com/Binglbh/Fast-Convergent-Proximity-Graphs-for-Approximate-Nearest-Neighbor-Search | Graph baseline; paper runs use `L=60`, `R=70`, `C=500`. |
-| IVF-RaBitQ | https://github.com/gaoj0017/RaBitQ and RaBitQ-Library: https://github.com/VectorDB-NTU/RaBitQ-Library | IVF plus RaBitQ quantization; paper runs use 4096 coarse clusters. |
-| DET-LSH | https://github.com/WeiJiuQi/DET-LSH | Theory-guaranteed LSH baseline; paper runs use `K=16`, `L=4`. |
+| SuCo | [WeiJiuQi/SuCo](https://github.com/WeiJiuQi/SuCo) | `N_s=8`, `K=50` |
+| TaCo | [WeiJiuQi/TaCo](https://github.com/WeiJiuQi/TaCo) | `N_s=8`, `s=10`, `K=50` |
+| CRISP | [Preprint](https://arxiv.org/abs/2603.05180) | 16 dimensions per subspace, `K=100` |
+| HNSW | [nmslib/hnswlib](https://github.com/nmslib/hnswlib) | `M=48`, `efC=200` |
+| alpha-CNG | [Binglbh/Fast-Convergent-Proximity-Graphs](https://github.com/Binglbh/Fast-Convergent-Proximity-Graphs-for-Approximate-Nearest-Neighbor-Search) | `L=60`, `R=70`, `C=500` |
+| IVF-RaBitQ | [gaoj0017/RaBitQ](https://github.com/gaoj0017/RaBitQ), [VectorDB-NTU/RaBitQ-Library](https://github.com/VectorDB-NTU/RaBitQ-Library) | 4096 coarse clusters |
+| DET-LSH | [WeiJiuQi/DET-LSH](https://github.com/WeiJiuQi/DET-LSH) | `K=16`, `L=4` |
 
-The helper `tools/experiments/baseline_benchmark.py` records baseline build and
-search metrics when given a command line for an externally checked-out baseline.
+## Repository Layout
 
-## Third-Party Code Included Here
+- `include/`: SCORE index construction, query, rotation, and update code.
+- `src/`: command-line executables.
+- `tests/`: C++ smoke and regression tests.
+- `tools/experiments/`: SCORE data conversion and Recall-QPS sweep helpers.
+- `external/RaBitQ-Library/`: vendored header-only RaBitQ subset.
+- `external/SuperKMeans/`: vendored header-only SuperKMeans subset.
 
-This artifact vendors only header subsets that are direct SCORE build
-dependencies:
-
-- RaBitQ-Library, upstream https://github.com/VectorDB-NTU/RaBitQ-Library,
-  local snapshot documented in `external/RaBitQ-Library/VENDOR.md`.
-- SuperKMeans, upstream https://github.com/cwida/SuperKMeans, local snapshot
-  documented in `external/SuperKMeans/VENDOR.md`.
-
-Their upstream licenses are preserved in the respective `external/*/LICENSE`
-files.
+The vendored dependencies retain their upstream licenses. Their snapshots are
+documented in
+[`external/RaBitQ-Library/VENDOR.md`](external/RaBitQ-Library/VENDOR.md) and
+[`external/SuperKMeans/VENDOR.md`](external/SuperKMeans/VENDOR.md).

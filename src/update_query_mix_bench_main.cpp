@@ -31,7 +31,7 @@ void print_usage() {
         << "  -M <int>                   Default 16\n"
         << "  -alpha <float>             Default 0.05\n"
         << "  -beta <float>              Default 0.001\n"
-        << "  -max_w <int>               Default 15\n"
+        << "  -max_w <int>               Default 3\n"
         << "  -score_prefetch <int>      Default 32\n"
         << "  -query_threads <int>       Default 1\n"
         << "  -query_batches <int>       Minimum full query-set passes while update runs (default 1)\n"
