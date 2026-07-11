@@ -116,9 +116,12 @@ The primary index builder, `score_stream_build_reorder`, uses these defaults:
 | `-sample_rows` | `65536` training rows |
 | `-train_iters` | `10` |
 | `-subspace_workers` | `0`, meaning all subspaces |
-| Input block | `65536` rows; `-block_mib` overrides it by size |
-| Reorder key | depth `2`, `cluster-first` |
-| Reorder I/O | `io_rows=65536`, `bucket_buffer_rows=64`, `rewrite_workers=4` |
+| `-block_mib` | Not set; the builder reads `65536` rows per block |
+| `-pid_reorder_cell_key_depth` | `2` |
+| `-pid_reorder_key_mode` | `cluster-first` |
+| `-io_rows` | `65536` |
+| `-bucket_buffer_rows` | `64` |
+| `-rewrite_workers` | `4` |
 
 `score_search` and `score_update_search` share these query defaults:
 
