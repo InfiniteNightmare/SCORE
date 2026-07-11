@@ -152,9 +152,6 @@ python3 tools/experiments/score_curve_sweep.py \
   --ivf-k 1024
 ```
 
-The script reuses an existing index or builds one if needed, and writes results
-to `docs/evaluation/`.
-
 To compute exact ground truth for a base/query pair:
 
 ```bash
