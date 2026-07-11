@@ -204,20 +204,16 @@ current live dataset.
 
 ## Paper Datasets
 
-The repository does not redistribute datasets. The experiment scripts expect
-the following paths:
+The repository does not redistribute datasets.
 
-| Dataset | Script key and expected files | Source |
-| --- | --- | --- |
-| GIST1M | `gist1m`: `dataset/gist/gist_{base,query}.fvecs`, `gist_groundtruth.ivecs` | [TEXMEX ANN GIST1M](http://corpus-texmex.irisa.fr/) |
-| LAION1M | `laion1m`: `dataset/laion1m/laion1m_{base,query}.fvecs`, `laion1m_groundtruth.ivecs` | [SISAP 2024 LAION challenge](https://sisap-challenges.github.io/2024/datasets/) |
-| Cohere1M | `cohere1m`: `dataset/cohere1m/cohere1m_{base,query}.fvecs`, `cohere1m_groundtruth.ivecs` | [makneeee/cohere_medium_1m](https://huggingface.co/datasets/makneeee/cohere_medium_1m) |
-| ImageNet1M | `imagenet1m_2048`: `dataset/imagenet1m_2048/imagenet1m_2048_{base,query}.fvecs`, `imagenet1m_2048_groundtruth.ivecs` | [ILSVRC 2012 images](https://image-net.org/challenges/LSVRC/2012/), evaluated as 2048-D features |
-| Cohere10M | `cohere10m`: `dataset/cohere10m/cohere10m_{base,query}.fvecs`, `cohere10m_groundtruth.ivecs` | [makneeee/cohere_large_10m](https://huggingface.co/datasets/makneeee/cohere_large_10m) |
-| Wikipedia | `wikipedia`: `dataset/wikipedia_bge_m3/wikipedia_bge_m3_{base,query}.fvecs`, `wikipedia_bge_m3_groundtruth.ivecs` | [SISAP 2026 development datasets](https://huggingface.co/datasets/SISAP-Challenges/SISAP2026) |
-
-For streaming builds, convert each base file to the same path with an `.fbin`
-extension.
+| Dataset | Data volume | Size | Dim | Query volume |
+| --- | ---: | ---: | ---: | ---: |
+| [GIST](http://corpus-texmex.irisa.fr/) | 1,000,000 | 3.58 GiB | 960 | 1,000 |
+| [LAION](https://sisap-challenges.github.io/2024/datasets/) | 1,000,000 | 2.86 GiB | 768 | 10,000 |
+| [Cohere1M](https://huggingface.co/datasets/makneeee/cohere_medium_1m) | 1,000,000 | 2.86 GiB | 768 | 10,000 |
+| [ImageNet](https://image-net.org/challenges/LSVRC/2012/) | 1,281,167 | 9.78 GiB | 2,048 | 25,000 |
+| [Cohere10M](https://huggingface.co/datasets/makneeee/cohere_large_10m) | 10,124,929 | 29.01 GiB | 768 | 10,000 |
+| [Wikipedia](https://huggingface.co/datasets/SISAP-Challenges/SISAP2026) | 6,350,000 | 24.25 GiB | 1,024 | 10,000 |
 
 ## Baseline Sources
 
