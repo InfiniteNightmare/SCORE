@@ -152,12 +152,8 @@ python3 tools/experiments/score_curve_sweep.py \
   --ivf-k 1024
 ```
 
-The default grid uses `alpha={0.03,0.04,0.05,0.06}`,
-`beta={0.001,0.002,0.005,0.01,0.02}`, `max_w=3`, five runs per point, and one
-query thread. If the index directory is absent, the script builds it first; an
-existing directory is treated as a fixed index. Results are written under
-`docs/evaluation/`. Use `--overwrite-logs` to replace results with the same
-label and `--force-rebuild` to rebuild an index under `results/`.
+The script reuses an existing index or builds one if needed, and writes results
+to `docs/evaluation/`.
 
 To compute exact ground truth for a base/query pair:
 
