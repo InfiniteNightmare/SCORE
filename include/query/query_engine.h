@@ -815,23 +815,7 @@ public:
         }
         ranked_size_ = (size_t)n;
 
-        int partial_k = std::min((int)ranked_size_, config_.topk);
-        auto ranked_end = ranked_.begin() + (ptrdiff_t)ranked_size_;
-        std::partial_sort(ranked_.begin(), ranked_.begin() + partial_k, ranked_end);
-
-        const int ranked_count = (int)ranked_size_;
-        float threshold_verify = std::numeric_limits<float>::max();
-        if (ranked_count >= config_.topk && config_.topk > 0) {
-            auto& kth = ranked_[config_.topk - 1];
-            threshold_verify = 2.0f * kth.est_dist - kth.low_dist;
-        }
-
-        top_pids_.clear();
-        for (int i = 0; i < ranked_count; i++) {
-            if (i < config_.topk || ranked_[i].low_dist <= threshold_verify)
-                top_pids_.push_back(ranked_[i].pid);
-        }
-        std::sort(top_pids_.begin(), top_pids_.end());
+        select_rabitq_verification_candidates();
         if (config_.query_profile) {
             profile_stats_.rabitq_rank_us += phase_timer.elapsed_us();
             phase_timer.reset();
@@ -1231,23 +1215,7 @@ public:
         rank_record_refs(delta_candidate_record_refs_);
 
         if (ranked_size_ == 0) return;
-        int partial_k = std::min((int)ranked_size_, config_.topk);
-        auto ranked_end = ranked_.begin() + (ptrdiff_t)ranked_size_;
-        std::partial_sort(ranked_.begin(), ranked_.begin() + partial_k, ranked_end);
-
-        const int ranked_count = (int)ranked_size_;
-        float threshold_verify = std::numeric_limits<float>::max();
-        if (ranked_count >= config_.topk && config_.topk > 0) {
-            auto& kth = ranked_[config_.topk - 1];
-            threshold_verify = 2.0f * kth.est_dist - kth.low_dist;
-        }
-
-        top_pids_.clear();
-        for (int i = 0; i < ranked_count; i++) {
-            if (i < config_.topk || ranked_[i].low_dist <= threshold_verify)
-                top_pids_.push_back(ranked_[i].pid);
-        }
-        std::sort(top_pids_.begin(), top_pids_.end());
+        select_rabitq_verification_candidates();
         if (config_.query_profile) {
             profile_stats_.rabitq_rank_us += phase_timer.elapsed_us();
             phase_timer.reset();
@@ -3366,12 +3334,35 @@ private:
     struct RankEntry {
         float est_dist, low_dist;
         int pid;
+
+        float upper_dist() const { return 2.0f * est_dist - low_dist; }
         bool operator<(const RankEntry& o) const {
             if (est_dist != o.est_dist) return est_dist < o.est_dist;
             if (low_dist != o.low_dist) return low_dist < o.low_dist;
             return pid < o.pid;
         }
     };
+    void select_rabitq_verification_candidates() {
+        // The k smallest upper bounds witness at least k candidates at or
+        // below the cutoff whenever their distance bounds hold.
+        float cutoff = std::numeric_limits<float>::infinity();
+        const auto ranked_end = ranked_.begin() + static_cast<ptrdiff_t>(ranked_size_);
+        if (config_.topk > 0 && static_cast<size_t>(config_.topk) < ranked_size_) {
+            const auto top_end = ranked_.begin() + config_.topk;
+            std::partial_sort(ranked_.begin(), top_end, ranked_end,
+                [](const RankEntry& lhs, const RankEntry& rhs) {
+                    return lhs.upper_dist() < rhs.upper_dist();
+                });
+            cutoff = (top_end - 1)->upper_dist();
+        }
+
+        top_pids_.clear();
+        for (auto it = ranked_.begin(); it != ranked_end; ++it) {
+            if (it->low_dist <= cutoff) top_pids_.push_back(it->pid);
+        }
+        std::sort(top_pids_.begin(), top_pids_.end());
+    }
+
     std::vector<RankEntry> ranked_;
     size_t ranked_size_ = 0;
     std::vector<int> phase5_candidates_;
